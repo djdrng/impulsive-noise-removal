@@ -39,39 +39,30 @@ def apply_impulsive_noise(image_data: np.ndarray, amplitude, probability) -> np.
           image_data[i][j] = (image_data[i][j] + amplitude) % 255
   return image_data
 
-def get_mean(x: np.ndarray, i, j):
+def get_median(x: np.ndarray, i, j):
   """
   Calculate mean of pixel accounting for boundaries
   """
-  mean = 0
-  count = 1
+  med_vals = []
   if i > 0 and j > 0:
-    mean += x[i-1][j-1]
-    count += 1
+    med_vals.append(x[i-1][j-1])
   if i > 0:
-    mean += x[i-1][j]
-    count += 1
+    med_vals.append(x[i-1][j])
   if i > 0 and j < len(x[0]) - 1:
-    mean += x[i-1][j+1]
-    count += 1
+    med_vals.append(x[i-1][j+1])
   if i < len(x) - 1 and j < len(x[0]) - 1:
-    mean += x[i+1][j+1]
-    count += 1
+    med_vals.append(x[i+1][j+1])
   if i < len(x) - 1:
-    mean += x[i+1][j]
-    count += 1
+    med_vals.append(x[i+1][j])
   if i < len(x) - 1 and j > 0:
-    mean += x[i+1][j-1]
-    count += 1
+    med_vals.append(x[i+1][j-1])
   if j < len(x[0]) - 1:
-    mean += x[i][j+1]
-    count += 1
+    med_vals.append(x[i][j+1])
   if j > 0:
-    mean += x[i][j-1]
-    count += 1
-  mean += x[i][j]
-  mean /= count
-  return mean
+    med_vals.append(x[i][j-1])
+  med_vals.append(x[i][j])
+  med_vals.sort()
+  return med_vals[len(med_vals) // 2]
 
 def apply_median_filter(x: np.ndarray):
   """
@@ -81,7 +72,7 @@ def apply_median_filter(x: np.ndarray):
   for i in range(len(x)):
     for j in range(len(x[0])):
 
-      filtered[i][j] = get_mean(x, i, j)
+      filtered[i][j] = get_median(x, i, j)
   return filtered
 
 def apply_rudimentary_filter(x: np.ndarray, beta):
@@ -92,7 +83,7 @@ def apply_rudimentary_filter(x: np.ndarray, beta):
   for i in range(len(x)):
     for j in range(len(x[0])):
 
-      m = get_mean(x, i, j)
+      m = get_median(x, i, j)
       if filtered[i][j] > m + beta:
         filtered[i][j] = m + beta
       elif filtered[i][j] < m - beta:
@@ -111,7 +102,7 @@ def apply_filter(x: np.ndarray, beta, delta):
   for i in range(len(x)):
     for j in range(len(x[0])):
 
-      m = get_mean(x, i, j)
+      m = get_median(x, i, j)
       filtered[i][j] = m - ((beta + delta) / (2 * delta)) * abs( m + beta - x[i][j] ) \
                      + ((beta + delta) / (2 * delta)) * abs( m - beta - x[i][j]) \
                      - (beta) / (2 * delta) * abs(m - beta - delta - x[i][j]) \
