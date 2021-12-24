@@ -8,11 +8,7 @@ def load_image(path: pl.Path) -> np.ndarray:
   """
   image = Image.open(path)
   data = np.asarray(image)
-  out = np.ndarray((len(data), len(data[0])))
-  for i in range(len(data)):
-    for j in range(len(data[0])):
-      out[i][j] = data[i][j][0]
-  return out
+  return data
 
 def create_image(data: np.ndarray) -> Image:
   """
@@ -21,11 +17,9 @@ def create_image(data: np.ndarray) -> Image:
   arr = np.ndarray((len(data), len(data[0]), 3))
   for i in range(len(data)):
     for j in range(len(data[0])):
-      arr[i][j][0] = data[i][j]
-      arr[i][j][1] = data[i][j]
-      arr[i][j][2] = data[i][j]
-      if (data[i][j] > 255 or data[i][j] < 0):
-        print(f"Found bad value: {i}, {j}, {data[i][j]}")
+      arr[i][j][0] = data[i][j][0]
+      arr[i][j][1] = data[i][j][1]
+      arr[i][j][2] = data[i][j][2]
   image = Image.fromarray(arr.astype(np.uint8))
   return image
 
@@ -35,32 +29,33 @@ def apply_impulsive_noise(image_data: np.ndarray, amplitude, probability) -> np.
   """
   for i in range(len(image_data)):
     for j in range(len(image_data[0])):
-      if (np.random.random() < probability):
-          image_data[i][j] = (image_data[i][j] + amplitude) % 255
+      for k in range(3):
+        if (np.random.random() < probability):
+            image_data[i][j][k] = (image_data[i][j][k] + amplitude) % 255
   return image_data
 
-def get_median(x: np.ndarray, i, j):
+def get_median(x: np.ndarray, i, j, k):
   """
   Calculate mean of pixel accounting for boundaries
   """
   med_vals = []
   if i > 0 and j > 0:
-    med_vals.append(x[i-1][j-1])
+    med_vals.append(x[i-1][j-1][k])
   if i > 0:
-    med_vals.append(x[i-1][j])
+    med_vals.append(x[i-1][j][k])
   if i > 0 and j < len(x[0]) - 1:
-    med_vals.append(x[i-1][j+1])
+    med_vals.append(x[i-1][j+1][k])
   if i < len(x) - 1 and j < len(x[0]) - 1:
-    med_vals.append(x[i+1][j+1])
+    med_vals.append(x[i+1][j+1][k])
   if i < len(x) - 1:
-    med_vals.append(x[i+1][j])
+    med_vals.append(x[i+1][j][k])
   if i < len(x) - 1 and j > 0:
-    med_vals.append(x[i+1][j-1])
+    med_vals.append(x[i+1][j-1][k])
   if j < len(x[0]) - 1:
-    med_vals.append(x[i][j+1])
+    med_vals.append(x[i][j+1][k])
   if j > 0:
-    med_vals.append(x[i][j-1])
-  med_vals.append(x[i][j])
+    med_vals.append(x[i][j-1][k])
+  med_vals.append(x[i][j][k])
   med_vals.sort()
   return med_vals[len(med_vals) // 2]
 
@@ -71,8 +66,8 @@ def apply_median_filter(x: np.ndarray):
   filtered = np.copy(x)
   for i in range(len(x)):
     for j in range(len(x[0])):
-
-      filtered[i][j] = get_median(x, i, j)
+      for k in range(3):
+        filtered[i][j][k] = get_median(x, i, j, k)
   return filtered
 
 def apply_rudimentary_filter(x: np.ndarray, beta):
@@ -82,15 +77,16 @@ def apply_rudimentary_filter(x: np.ndarray, beta):
   filtered = np.copy(x)
   for i in range(len(x)):
     for j in range(len(x[0])):
+      for k in range(3):
 
-      m = get_median(x, i, j)
-      if filtered[i][j] > m + beta:
-        filtered[i][j] = m + beta
-      elif filtered[i][j] < m - beta:
-        filtered[i][j] = m - beta
+        m = get_median(x, i, j, k)
+        if filtered[i][j][k] > m + beta:
+          filtered[i][j][k] = m + beta
+        elif filtered[i][j][k] < m - beta:
+          filtered[i][j][k] = m - beta
 
-      if filtered[i][j] > 255: filtered[i][j] = 255
-      if filtered[i][j] < 0:   filtered[i][j] = 0
+        if filtered[i][j][k] > 255: filtered[i][j][k] = 255
+        if filtered[i][j][k]< 0:   filtered[i][j][k] = 0
 
   return filtered
 
@@ -101,15 +97,15 @@ def apply_filter(x: np.ndarray, beta, delta):
   filtered = np.copy(x)
   for i in range(len(x)):
     for j in range(len(x[0])):
+      for k in range(3):
 
-      m = get_median(x, i, j)
-      filtered[i][j] = m - ((beta + delta) / (2 * delta)) * abs( m + beta - x[i][j] ) \
-                     + ((beta + delta) / (2 * delta)) * abs( m - beta - x[i][j]) \
-                     - (beta) / (2 * delta) * abs(m - beta - delta - x[i][j]) \
-                     + (beta) / (2 * delta) * abs(m + beta + delta - x[i][j])
-      if filtered[i][j] > 255: filtered[i][j] = 255
-      if filtered[i][j] < 0:   filtered[i][j] = 0
-
+        m = get_median(x, i, j, k)
+        filtered[i][j][k] = m - ((beta + delta) / (2 * delta)) * abs( m + beta - x[i][j][k] ) \
+                      + ((beta + delta) / (2 * delta)) * abs( m - beta - x[i][j][k]) \
+                      - (beta) / (2 * delta) * abs(m - beta - delta - x[i][j][k]) \
+                      + (beta) / (2 * delta) * abs(m + beta + delta - x[i][j][k])
+        if filtered[i][j][k] > 255: filtered[i][j][k] = 255
+        if filtered[i][j][k] < 0:   filtered[i][j][k] = 0
   return filtered
 
 def calculate_image_difference(x: np.ndarray, y: np.ndarray):
@@ -121,17 +117,23 @@ def calculate_image_difference(x: np.ndarray, y: np.ndarray):
   assert len(x) == len(y)
   assert len(x[0]) == len(y[0])
 
+  num_elems = 0
   diff = 0
   for i in range(len(x)):
     for j in range(len(x[0])):
-      diff += abs(x[i][j] - y[i][j]) 
+      for k in range(3):
+        val = abs(x[i][j][k] - y[i][j][k]) 
+        num_elems += 1
+        diff = diff + (val - diff)/num_elems
+        # print(diff)
+  return diff / (len(x) * len(x[0]) * 3)
 
-  return diff / (len(x) * len(x[0]))
 
-
-image_list = ["pic1", "pic2", "pic3"]
-beta_values = [45, 50, 55, 60, 65, 70, 75]
-delta_values = [0.5, 1, 2]
+# image_list = ["pic1", "pic2", "pic3", "test"]
+image_list = ["test"]
+# beta_values = [45, 50, 55, 60, 65, 70, 75]
+beta_values = [60]
+delta_values = [0.5]
 
 for image_name in image_list:
   file_name = "images/" + image_name + ".jpg"
@@ -139,17 +141,19 @@ for image_name in image_list:
   image = np.copy(original)
 
   # Add noise to the image
+  print("Applying noise")
   noisy = apply_impulsive_noise(image, 100, 0.1)
   noisy_image = create_image(noisy)
   noisy_image.save("images/" + image_name + "_noisy.jpg", "JPEG")
 
   # Apply Median Filter for contrast
-  noisy_data = np.copy(noisy)
-  median = apply_median_filter(noisy_data)
-  median_image = create_image(median)
-  median_image.save("images/" + image_name + "_median.jpg", "JPEG")
-  median_results = calculate_image_difference(original, median)
-  print(f"{image_name : <10} Median Results: {median_results}")
+  # print("Applying Median Filter")
+  # noisy_data = np.copy(noisy)
+  # median = apply_median_filter(noisy_data)
+  # median_image = create_image(median)
+  # median_image.save("images/" + image_name + "_median.jpg", "JPEG")
+  # median_results = calculate_image_difference(original, median)
+  # print(f"{image_name : <10} Median Results: {median_results}")
 
   best_result = 255
   best_beta = 0
@@ -158,6 +162,7 @@ for image_name in image_list:
   best_rudimentary_beta = 0
 
   for beta in beta_values:
+    print(f"Testing Beta Value: {beta}")
     # Test rudimentary filter
     noisy_data = np.copy(noisy)
     rudimentary = apply_rudimentary_filter(noisy_data, beta)
@@ -170,6 +175,7 @@ for image_name in image_list:
     print(f"{image_name : <10} {beta : ^10} Rudimentary Results: {rudimentary_results}")
   
     for delta in delta_values:
+      print(f"Testing Delta Value: {delta}")
       # Normal Filter
       noisy_data = np.copy(noisy)
       filtered = apply_filter(noisy_data, beta, delta)
@@ -183,15 +189,17 @@ for image_name in image_list:
       print(f"{image_name : <10} {beta : ^10} {delta : ^10} Results: {results}")
 
   # Select the best results and save the images
-  noisy_data = np.copy(noisy)
-  rudimentary = apply_rudimentary_filter(noisy_data, best_rudimentary_beta)
-  rudimentary_image = create_image(rudimentary)
-  rudimentary_image.save("images/" + image_name + "_rudimentary.jpg", "JPEG")
+  # print("Applying Rudimentary Filter")
+  # noisy_data = np.copy(noisy)
+  # rudimentary = apply_rudimentary_filter(noisy_data, best_rudimentary_beta)
+  # rudimentary_image = create_image(rudimentary)
+  # rudimentary_image.save("images/" + image_name + "_rudimentary.jpg", "JPEG")
 
+  print(f"Applying PWL Filter, Beta {best_beta}, Delta {best_delta}")
   noisy_data = np.copy(noisy)
   filtered = apply_filter(noisy_data, best_beta, best_delta)
   filtered_image = create_image(filtered)
-  filtered_image.save("images/" + image_name + "_rudimentary.jpg", "JPEG")
+  filtered_image.save("images/" + image_name + "_filtered.jpg", "JPEG")
 
 
 # 5% noise probability to show increase in performance
