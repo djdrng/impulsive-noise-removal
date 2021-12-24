@@ -41,7 +41,7 @@ def apply_impulsive_noise(image_data: np.ndarray, amplitude, probability) -> np.
 
 def get_median(x: np.ndarray, i, j):
   """
-  Calculate mean of pixel accounting for boundaries
+  Calculate median of pixel accounting for boundaries
   """
   med_vals = []
   if i > 0 and j > 0:
@@ -71,7 +71,6 @@ def apply_median_filter(x: np.ndarray):
   filtered = np.copy(x)
   for i in range(len(x)):
     for j in range(len(x[0])):
-
       filtered[i][j] = get_median(x, i, j)
   return filtered
 
@@ -131,7 +130,8 @@ def calculate_image_difference(x: np.ndarray, y: np.ndarray):
 
 image_list = ["pic1", "pic2", "pic3"]
 beta_values = [45, 50, 55, 60, 65, 70, 75]
-delta_values = [0.5, 1, 2]
+#beta_values = [20, 40, 60, 80]
+delta_values = [1]
 
 for image_name in image_list:
   file_name = "images/" + image_name + ".jpg"
@@ -191,7 +191,7 @@ for image_name in image_list:
   noisy_data = np.copy(noisy)
   filtered = apply_filter(noisy_data, best_beta, best_delta)
   filtered_image = create_image(filtered)
-  filtered_image.save("images/" + image_name + "_rudimentary.jpg", "JPEG")
+  filtered_image.save("images/" + image_name + "_filtered.jpg", "JPEG")
 
 
 # 5% noise probability to show increase in performance
