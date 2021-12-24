@@ -73,6 +73,17 @@ def get_mean(x: np.ndarray, i, j):
   mean /= count
   return mean
 
+def apply_median_filter(x: np.ndarray):
+  """
+  Apply median filter, for comparison
+  """
+  filtered = np.copy(x)
+  for i in range(len(x)):
+    for j in range(len(x[0])):
+
+      filtered[i][j] = get_mean(x, i, j)
+  return filtered
+
 def apply_rudimentary_filter(x: np.ndarray, beta):
   """
   Apply rudimentary version of the filter, with only a beta value
@@ -129,8 +140,7 @@ def calculate_image_difference(x: np.ndarray, y: np.ndarray):
 
 image_list = ["pic1", "pic2", "pic3"]
 beta_values = [45, 50, 55, 60, 65, 70, 75]
-#beta_values = [20,40,60,80]
-delta_values = [1,10]
+delta_values = [0.5, 1, 2]
 
 for image_name in image_list:
   file_name = "images/" + image_name + ".jpg"
@@ -142,6 +152,14 @@ for image_name in image_list:
   noisy_image = create_image(noisy)
   noisy_image.save("images/" + image_name + "_noisy.jpg", "JPEG")
 
+  # Apply Median Filter for contrast
+  noisy_data = np.copy(noisy)
+  median = apply_median_filter(noisy_data)
+  median_image = create_image(median)
+  median_image.save("images/" + image_name + "_median.jpg", "JPEG")
+  median_results = calculate_image_difference(original, median)
+  print(f"{image_name : <10} Median Results: {median_results}")
+
   best_result = 255
   best_beta = 0
   best_delta = 0
@@ -150,7 +168,8 @@ for image_name in image_list:
 
   for beta in beta_values:
     # Test rudimentary filter
-    rudimentary = apply_rudimentary_filter(noisy, beta)
+    noisy_data = np.copy(noisy)
+    rudimentary = apply_rudimentary_filter(noisy_data, beta)
     rudimentary_image = create_image(rudimentary)
     rudimentary_results = calculate_image_difference(original, rudimentary)
     if rudimentary_results < best_rudimentary_result:
@@ -161,9 +180,9 @@ for image_name in image_list:
   
     for delta in delta_values:
       # Normal Filter
-      filtered = apply_filter(noisy, beta, delta)
+      noisy_data = np.copy(noisy)
+      filtered = apply_filter(noisy_data, beta, delta)
       filtered_image = create_image(filtered)
-      filtered_image.save("images/" + image_name + "_filtered.jpg", "JPEG")
       results = calculate_image_difference(original, filtered)
       if results < best_result:
         best_result = results
@@ -173,10 +192,23 @@ for image_name in image_list:
       print(f"{image_name : <10} {beta : ^10} {delta : ^10} Results: {results}")
 
   # Select the best results and save the images
-  rudimentary = apply_rudimentary_filter(noisy, best_rudimentary_beta)
+  noisy_data = np.copy(noisy)
+  rudimentary = apply_rudimentary_filter(noisy_data, best_rudimentary_beta)
   rudimentary_image = create_image(rudimentary)
   rudimentary_image.save("images/" + image_name + "_rudimentary.jpg", "JPEG")
 
-  filtered = apply_filter(noisy, best_beta, best_delta)
+  noisy_data = np.copy(noisy)
+  filtered = apply_filter(noisy_data, best_beta, best_delta)
   filtered_image = create_image(filtered)
   filtered_image.save("images/" + image_name + "_rudimentary.jpg", "JPEG")
+
+
+# 5% noise probability to show increase in performance
+file_name = "images/pic3.jpg"
+original = load_image(file_name)
+
+# Add noise to the image
+noisy = apply_impulsive_noise(original, 100, 0.05)
+filtered = apply_filter(noisy, 60, 1)
+filtered_image = create_image(filtered)
+filtered_image.save("images/pic3_5_filtered.jpg", "JPEG")
